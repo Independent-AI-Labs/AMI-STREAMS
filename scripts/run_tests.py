@@ -5,17 +5,22 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Add current directory to path for ami_path import
+sys.path.insert(0, str(Path(__file__).parent))
+
+from ami_path import setup_ami_paths  # noqa: E402
+
 
 def main() -> int:
     """Run tests for streams module."""
     # Pytest exit codes
     pytest_no_tests_collected = 5
 
-    # Get module root
-    module_root = Path(__file__).resolve().parent.parent
+    # Setup paths
+    orchestrator_root, module_root, module_name = setup_ami_paths()
 
     # Find venv python executable
-    venv_python = module_root.parent / ".venv" / "Scripts" / "python.exe"
+    venv_python = orchestrator_root / ".venv" / "Scripts" / "python.exe"
     if not venv_python.exists():
         print("ERROR: Virtual environment not found at expected location")
         return 1

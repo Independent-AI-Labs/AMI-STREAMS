@@ -1,27 +1,38 @@
 #!/usr/bin/env python
-"""Streams module setup - uses base AMIModuleSetup."""
+"""Module setup for streams."""
 
-import subprocess
 import sys
 from pathlib import Path
 
-# Get this module's root
-MODULE_ROOT = Path(__file__).resolve().parent
+# Add paths FIRST!
+LOCAL_DIR = Path(__file__).parent
+sys.path.insert(0, str(LOCAL_DIR / "scripts"))
+
+# Import ami_path directly from local scripts directory
+from ami_path import setup_ami_paths  # noqa: E402
+
+# Add other paths AFTER importing ami_path to avoid conflicts
+sys.path.insert(0, str(LOCAL_DIR))
+sys.path.insert(0, str(LOCAL_DIR.parent))
+
+ORCHESTRATOR_ROOT, MODULE_ROOT, MODULE_NAME = setup_ami_paths()
+
+# NOW safe to import from base
+from base.module_setup import AMIModuleSetup  # noqa: E402
 
 
 def main() -> int:
-    """Run setup for streams module by calling base module_setup.py directly."""
-    # Find base module_setup.py
-    base_setup = MODULE_ROOT.parent / "base" / "module_setup.py"
-    if not base_setup.exists():
-        print("ERROR: Cannot find base/module_setup.py")
-        sys.exit(1)
+    """Set up the streams module."""
+    try:
+        # Create module setup with proper parameters
+        module_setup = AMIModuleSetup(project_root=MODULE_ROOT, project_name=MODULE_NAME)
 
-    # Call base module_setup.py with appropriate arguments
-    cmd = [sys.executable, str(base_setup), "--project-dir", str(MODULE_ROOT), "--project-name", "Streams Module"]
+        # Run setup
+        return module_setup.setup()
 
-    result = subprocess.run(cmd, check=False)
-    return result.returncode
+    except Exception as e:
+        print(f"ERROR: Failed to set up streams module: {e}")
+        return 1
 
 
 if __name__ == "__main__":
