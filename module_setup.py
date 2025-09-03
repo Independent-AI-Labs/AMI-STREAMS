@@ -9,7 +9,7 @@ from pathlib import Path
 MODULE_ROOT = Path(__file__).resolve().parent
 
 
-def main():
+def main() -> int:
     """Run setup for streams module by calling base module_setup.py directly."""
     # Find base module_setup.py
     base_setup = MODULE_ROOT.parent / "base" / "module_setup.py"
