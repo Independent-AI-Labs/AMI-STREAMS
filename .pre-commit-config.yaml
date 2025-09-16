@@ -5,10 +5,13 @@ repos:
     hooks:
       # Linting (includes security checks)
       - id: ruff
-        args: [ --fix, --exit-non-zero-on-fix ]
+        args: [ --fix, --exit-non-zero-on-fix, . ]
+        pass_filenames: false
         stages: [ pre-commit ]
       # Formatting (replaces black)
       - id: ruff-format
+        args: [ . ]
+        pass_filenames: false
         stages: [ pre-commit ]
 
   # Type checking
@@ -16,38 +19,24 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: ".venv/bin/python -m mypy backend --config-file=mypy.ini"
+        entry: 'bash -c "cd .. && streams/.venv/bin/python -m mypy -p streams --config-file=streams/mypy.ini"'
         language: system
         types: [ python ]
         require_serial: true
-        stages: [ pre-push ]
+        stages: [ pre-commit ]
         pass_filenames: false
 
+  # Run tests on pre-push
   - repo: local
     hooks:
       - id: pytest
         name: pytest
-        entry: python scripts/run_tests.py
+        entry: bash -c "./.venv/bin/python -m pytest -q"
         language: system
         pass_filenames: false
         always_run: true
         stages: [ pre-push ]
         require_serial: true
-
-  # Module-wide ruff on push
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.9
-    hooks:
-      - id: ruff
-        name: ruff (module-wide)
-        args: [ --fix, --exit-non-zero-on-fix, --force-exclude, --extend-exclude, .venv, . ]
-        pass_filenames: false
-        stages: [ pre-push ]
-      - id: ruff-format
-        name: ruff-format (module-wide)
-        args: [ --force-exclude, --extend-exclude, .venv, . ]
-        pass_filenames: false
-        stages: [ pre-push ]
 
   # Additional useful hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
