@@ -1,6 +1,10 @@
 # AMI Streams Module
 
-The Streams module is a work-in-progress space for real-time orchestration experiments. At the moment it provides scaffolding (package layout, tests, setup scripts) but no production-ready services.
+Streams is where AMI explores real-time intelligence. It exists to incubate streaming pipelines and event-driven agent workflows that will eventually power responsive user experiences.
+
+## What You Get Today
+
+Right now the module provides scaffolding (package layout, tests, setup scripts) but no production-ready services.
 
 ## Current State
 
