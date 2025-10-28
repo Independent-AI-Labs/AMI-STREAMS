@@ -63,79 +63,136 @@ The following capabilities are architectural specifications for future developme
 ### Current Architecture: Matrix Messaging
 
 ```mermaid
-graph TB
-    subgraph "Production Stack"
-        Client[Element Web Client<br/>Port 8888]
-        Synapse[Matrix Synapse<br/>Homeserver<br/>Port 8008]
-        DB[(PostgreSQL<br/>Message Storage)]
+flowchart LR
+    Users([Users])
+
+    subgraph Docker["Docker Stack (Production)"]
+        Element["Element Web Client
+        Port: 8888
+        Interface: HTTPS"]
+
+        Synapse["Matrix Synapse
+        Port: 8008
+        Protocol: Matrix/HTTP"]
+
+        Postgres[("PostgreSQL
+        Message Store
+        E2EE Messages")]
     end
 
-    Client -->|WebSocket| Synapse
-    Synapse -->|Store| DB
-    Synapse -.->|Federation| Internet[Other Matrix<br/>Homeservers]
+    Federation{{"Federation
+    Other Matrix
+    Servers"}}
 
-    style Client fill:#4CAF50
-    style Synapse fill:#4CAF50
-    style DB fill:#4CAF50
+    Users -->|HTTPS| Element
+    Element <-->|Matrix Protocol
+    WebSocket| Synapse
+    Synapse -->|SQL| Postgres
+    Synapse <-.->|Federation
+    HTTPS| Federation
+
+    style Element fill:#2196F3,stroke:#1976D2,stroke-width:3px,color:#fff
+    style Synapse fill:#4CAF50,stroke:#388E3C,stroke-width:3px,color:#fff
+    style Postgres fill:#FF9800,stroke:#F57C00,stroke-width:3px,color:#fff
+    style Federation fill:#9C27B0,stroke:#7B1FA2,stroke-width:2px,color:#fff
 ```
 
 ### Future Architecture: Distributed CDN + P2P
 
 ```mermaid
-graph TB
-    subgraph "Global DNS Layer"
-        DNS[DNS Load Balancer<br/>GeoDNS + Anycast]
+flowchart TB
+    Clients([End Users])
+
+    subgraph DNS["Global Load Balancing"]
+        LB["DNS/Anycast Router
+        GeoDNS
+        Health Checks"]
     end
 
-    subgraph "Edge Network"
-        Edge1[Edge US-East<br/>Cache + P2P Node]
-        Edge2[Edge EU-West<br/>Cache + P2P Node]
-        Edge3[Edge AP-Southeast<br/>Cache + P2P Node]
+    subgraph EdgeLayer["Edge Network - Global Distribution"]
+        direction LR
+        EdgeUS["US-East Edge
+        Cache + CDN
+        P2P Node"]
+
+        EdgeEU["EU-West Edge
+        Cache + CDN
+        P2P Node"]
+
+        EdgeAP["AP-Southeast Edge
+        Cache + CDN
+        P2P Node"]
     end
 
-    subgraph "P2P Mesh"
-        DHT[Distributed Hash Table<br/>Content Discovery]
-        Edge1 <-->|P2P Sync| Edge2
-        Edge2 <-->|P2P Sync| Edge3
-        Edge3 <-->|P2P Sync| Edge1
-        DHT -.-> Edge1
-        DHT -.-> Edge2
-        DHT -.-> Edge3
+    subgraph P2P["Peer-to-Peer Mesh"]
+        DHT["Distributed Hash Table
+        Kademlia Protocol
+        Content Discovery"]
+
+        EdgeUS <-->|"P2P Sync
+        Direct Transfer"| EdgeEU
+        EdgeEU <-->|"P2P Sync
+        Direct Transfer"| EdgeAP
+        EdgeAP <-->|"P2P Sync
+        Direct Transfer"| EdgeUS
+
+        DHT -.->|Announce| EdgeUS
+        DHT -.->|Announce| EdgeEU
+        DHT -.->|Announce| EdgeAP
     end
 
-    subgraph "Origin Cluster"
-        Origin[Origin Servers<br/>Transcode + Ingest]
-        Storage[(Object Storage<br/>S3-Compatible)]
-        Metadata[(PostgreSQL<br/>Metadata)]
+    subgraph Origin["Origin Cluster - Central"]
+        OriginAPI["Origin API
+        Upload/Ingest
+        RTMP/HTTP"]
+
+        Transcoder["Transcoder Farm
+        FFmpeg + NVENC
+        Adaptive Bitrate"]
+
+        Storage[("Object Storage
+        S3-Compatible
+        Media Files")]
+
+        MetaDB[("PostgreSQL
+        Metadata
+        Analytics")]
+
+        OriginAPI --> Transcoder
+        Transcoder --> Storage
+        OriginAPI --> MetaDB
     end
 
-    subgraph "Client Layer"
-        Clients[Viewers<br/>WebRTC P2P Mesh]
-    end
+    Clients -->|"1. DNS Query"| LB
+    LB -->|"2. Route to Nearest"| EdgeLayer
 
-    DNS --> Edge1
-    DNS --> Edge2
-    DNS --> Edge3
+    EdgeUS -.->|"Cache Miss
+    Rare"| OriginAPI
+    EdgeEU -.->|"Cache Miss
+    Rare"| OriginAPI
+    EdgeAP -.->|"Cache Miss
+    Rare"| OriginAPI
 
-    Edge1 -.->|Cache Miss| Origin
-    Edge2 -.->|Cache Miss| Origin
-    Edge3 -.->|Cache Miss| Origin
+    EdgeUS -->|"3. Content Delivery
+    90% from Cache"| Clients
+    EdgeEU -->|"3. Content Delivery
+    90% from Cache"| Clients
+    EdgeAP -->|"3. Content Delivery
+    90% from Cache"| Clients
 
-    Origin --> Storage
-    Origin --> Metadata
+    Clients <-.->|"4. Client P2P
+    WebRTC Data Channels
+    Reduce Server Load"| Clients
 
-    Edge1 --> Clients
-    Edge2 --> Clients
-    Edge3 --> Clients
-    Clients <-->|P2P| Clients
-
-    style DNS fill:#2196F3
-    style Edge1 fill:#FFC107
-    style Edge2 fill:#FFC107
-    style Edge3 fill:#FFC107
-    style DHT fill:#9C27B0
-    style Origin fill:#FF5722
-    style Clients fill:#4CAF50
+    style LB fill:#2196F3,stroke:#1565C0,stroke-width:3px,color:#fff
+    style EdgeUS fill:#FFC107,stroke:#F57C00,stroke-width:3px,color:#000
+    style EdgeEU fill:#FFC107,stroke:#F57C00,stroke-width:3px,color:#000
+    style EdgeAP fill:#FFC107,stroke:#F57C00,stroke-width:3px,color:#000
+    style DHT fill:#9C27B0,stroke:#6A1B9A,stroke-width:3px,color:#fff
+    style OriginAPI fill:#F44336,stroke:#C62828,stroke-width:3px,color:#fff
+    style Transcoder fill:#E91E63,stroke:#AD1457,stroke-width:3px,color:#fff
+    style Storage fill:#FF5722,stroke:#D84315,stroke-width:3px,color:#fff
+    style MetaDB fill:#FF9800,stroke:#E65100,stroke-width:3px,color:#fff
 ```
 
 **Architecture Goals:**
@@ -148,60 +205,125 @@ graph TB
 ### Future P2P Mesh Topology
 
 ```mermaid
-graph LR
-    subgraph "DHT Network"
-        DHT1[DHT Node 1]
-        DHT2[DHT Node 2]
-        DHT3[DHT Node 3]
-        DHT1 <--> DHT2
-        DHT2 <--> DHT3
-        DHT3 <--> DHT1
+flowchart TB
+    subgraph DHT["DHT Network - Content Discovery"]
+        direction LR
+        DHT1["DHT Node 1
+        Bootstrap"]
+        DHT2["DHT Node 2
+        Bootstrap"]
+        DHT3["DHT Node 3
+        Bootstrap"]
+
+        DHT1 <-->|"Kademlia
+        Routing"| DHT2
+        DHT2 <-->|"Kademlia
+        Routing"| DHT3
+        DHT3 <-->|"Kademlia
+        Routing"| DHT1
     end
 
-    subgraph "Edge Swarm A"
-        EdgeA1[Edge A1<br/>Swarm Tracker]
-        EdgeA2[Edge A2]
-        EdgeA3[Edge A3]
-        EdgeA1 <--> EdgeA2
-        EdgeA2 <--> EdgeA3
+    subgraph SwarmA["Video A Swarm - Popular Content"]
+        direction TB
+        TrackerA["Edge Tracker A
+        Peer List
+        Stats"]
+
+        EdgeA1["Edge A1
+        Seeder
+        Full Copy"]
+
+        EdgeA2["Edge A2
+        Seeder
+        Full Copy"]
+
+        TrackerA --> EdgeA1
+        TrackerA --> EdgeA2
+        EdgeA1 <-->|"BitTorrent
+        Chunks"| EdgeA2
     end
 
-    subgraph "Edge Swarm B"
-        EdgeB1[Edge B1<br/>Swarm Tracker]
-        EdgeB2[Edge B2]
-        EdgeB3[Edge B3]
-        EdgeB1 <--> EdgeB2
-        EdgeB2 <--> EdgeB3
+    subgraph SwarmB["Video B Swarm - Viral Content"]
+        direction TB
+        TrackerB["Edge Tracker B
+        Peer List
+        Stats"]
+
+        EdgeB1["Edge B1
+        Seeder
+        Full Copy"]
+
+        EdgeB2["Edge B2
+        Seeder
+        Partial Copy"]
+
+        TrackerB --> EdgeB1
+        TrackerB --> EdgeB2
+        EdgeB1 <-->|"BitTorrent
+        Chunks"| EdgeB2
     end
 
-    subgraph "Client Peers"
-        C1[Client 1<br/>Uploader]
-        C2[Client 2<br/>Leecher]
-        C3[Client 3<br/>Uploader]
+    subgraph Clients["Client Peers - WebRTC Mesh"]
+        direction LR
+        C1["Client 1
+        Uploader
+        Upload: 5 Mbps"]
+
+        C2["Client 2
+        Leecher
+        Download Only"]
+
+        C3["Client 3
+        Uploader
+        Upload: 2 Mbps"]
+
+        C1 <-->|"WebRTC
+        Data Channel
+        Chunk 1-10"| C2
+
+        C2 <-->|"WebRTC
+        Data Channel
+        Chunk 11-20"| C3
+
+        C3 <-->|"WebRTC
+        Data Channel
+        Chunk 21-30"| C1
     end
 
-    DHT1 -.-> EdgeA1
-    DHT2 -.-> EdgeB1
+    DHT1 -.->|"Lookup
+    video_a.mp4"| TrackerA
+    DHT2 -.->|"Lookup
+    video_b.mp4"| TrackerB
 
-    EdgeA1 <-->|P2P| EdgeB1
-    EdgeA2 <-->|P2P| EdgeB2
+    EdgeA1 <-->|"Cross-Swarm
+    P2P Transfer"| EdgeB1
+    EdgeA2 <-->|"Cross-Swarm
+    P2P Transfer"| EdgeB2
 
-    EdgeA1 --> C1
-    EdgeA2 --> C2
-    EdgeB1 --> C3
+    EdgeA1 -->|"Initial
+    Seed"| C1
+    EdgeA2 -->|"Initial
+    Seed"| C2
+    EdgeB1 -->|"Initial
+    Seed"| C3
 
-    C1 <-->|WebRTC| C2
-    C2 <-->|WebRTC| C3
-    C3 <-->|WebRTC| C1
+    TrackerA -.->|"Announce
+    Peers"| Clients
+    TrackerB -.->|"Announce
+    Peers"| Clients
 
-    style DHT1 fill:#9C27B0
-    style DHT2 fill:#9C27B0
-    style DHT3 fill:#9C27B0
-    style EdgeA1 fill:#FFC107
-    style EdgeB1 fill:#FFC107
-    style C1 fill:#4CAF50
-    style C2 fill:#4CAF50
-    style C3 fill:#4CAF50
+    style DHT1 fill:#9C27B0,stroke:#6A1B9A,stroke-width:3px,color:#fff
+    style DHT2 fill:#9C27B0,stroke:#6A1B9A,stroke-width:3px,color:#fff
+    style DHT3 fill:#9C27B0,stroke:#6A1B9A,stroke-width:3px,color:#fff
+    style TrackerA fill:#FF5722,stroke:#D84315,stroke-width:3px,color:#fff
+    style TrackerB fill:#FF5722,stroke:#D84315,stroke-width:3px,color:#fff
+    style EdgeA1 fill:#FFC107,stroke:#F57C00,stroke-width:3px,color:#000
+    style EdgeA2 fill:#FFC107,stroke:#F57C00,stroke-width:3px,color:#000
+    style EdgeB1 fill:#FFC107,stroke:#F57C00,stroke-width:3px,color:#000
+    style EdgeB2 fill:#FFC107,stroke:#F57C00,stroke-width:3px,color:#000
+    style C1 fill:#4CAF50,stroke:#2E7D32,stroke-width:3px,color:#fff
+    style C2 fill:#4CAF50,stroke:#2E7D32,stroke-width:3px,color:#fff
+    style C3 fill:#4CAF50,stroke:#2E7D32,stroke-width:3px,color:#fff
 ```
 
 ---
