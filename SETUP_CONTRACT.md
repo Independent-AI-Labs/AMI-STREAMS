@@ -1,4 +1,4 @@
-# Streams Module — Setup Contract
+# Streams Module - Setup Contract
 
 Status
 - `module_setup.py` delegates to Base `AMIModuleSetup` (Python 3.12) and contains no third-party imports at module scope.
