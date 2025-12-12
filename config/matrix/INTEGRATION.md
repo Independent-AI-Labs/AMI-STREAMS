@@ -503,7 +503,7 @@ services:
 
 ## References
 
-- [Nodes Launcher Specification](../../../nodes/SPEC-LAUNCHER.md)
+- [Launcher Specification](../../../launcher/SPEC-LAUNCHER.md)
 - [Matrix Configuration](./README.md)
 - [ISMS-Matrix Integration Plan](../../../compliance/docs/research/ISMS-MATRIX-INTEGRATION-PLAN.md)
 - [Compliance Backend Spec](../../../compliance/docs/research/COMPLIANCE_BACKEND_SPEC.md)

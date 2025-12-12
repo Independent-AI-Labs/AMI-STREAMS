@@ -500,7 +500,7 @@ streams/
 
 ```bash
 # Run module test suite
-./scripts/ami-run.sh streams/scripts/run_tests.py
+./scripts/ami-run streams/scripts/run_tests.py
 
 # Currently: 1 basic smoke test
 # Future: Comprehensive integration tests for streaming, P2P, edge
