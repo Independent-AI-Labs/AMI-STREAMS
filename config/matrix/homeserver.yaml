@@ -1,237 +1,51 @@
-# Matrix Synapse Homeserver Configuration for ISMS
-# This configuration enforces ISMS requirements:
-# - End-to-end encryption by default
-# - 10-year message retention (EU AI Act Article 12)
-# - PostgreSQL backend for auditability
-# - Federation disabled for security isolation
-# - Registration disabled (admin provisioning only)
+# Configuration file for Synapse.
+#
+# This is a YAML file: see [1] for a quick introduction. Note in particular
+# that *indentation is important*: all the elements of a list or dictionary
+# should have the same indentation.
+#
+# [1] https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html
+#
+# For more information on how to configure Synapse, including a complete accounting of
+# each option, go to docs/usage/configuration/config_documentation.md or
+# https://matrix-org.github.io/synapse/latest/usage/configuration/config_documentation.html
 
-# Server identity
 server_name: "matrix.openami.local"
-public_baseurl: "http://matrix.openami.local:8008"
-web_client_location: "http://localhost:8888/"
-serve_server_wellknown: true
+pid_file: /data/homeserver.pid
 
-# Ports
 listeners:
   - port: 8008
     tls: false
     type: http
     x_forwarded: true
-    bind_addresses: ['0.0.0.0']
-
     resources:
       - names: [client, federation]
         compress: false
 
-# Database (PostgreSQL for compliance auditability)
 database:
   name: psycopg2
+  txn_limit: 10000
   args:
     user: synapse
-    password: synapse_secure_password
+    password: "synapse_secure_password_CHANGE_ME_IN_PRODUCTION"
     database: synapse
     host: matrix-postgres
     port: 5432
     cp_min: 5
     cp_max: 10
 
-# Logging
 log_config: "/data/matrix.openami.local.log.config"
-
-# Media storage
 media_store_path: /data/media_store
-max_upload_size: 50M
 
-# Media retention (10 years for compliance)
-media_retention:
-  local_media_lifetime: 3650d   # 10 years
-  remote_media_lifetime: 90d    # Remote media purged after 90 days
-
-# Uploads
-max_spider_size: 10M
-
-# Encryption (E2E enabled by default per ISMS requirements)
-encryption_enabled_by_default_for_room_type: all
-require_encryption_for_room_type: all
-
-# Message retention (ISO 27001, EU AI Act Article 12)
-retention:
-  enabled: true
-  default_policy:
-    min_lifetime: 1d
-    max_lifetime: 3650d  # 10 years
-  allowed_lifetime_min: 1d
-  allowed_lifetime_max: 3650d
-  purge_jobs:
-    - longest_max_lifetime: 3650d
-      interval: 1d
-
-# Rate limiting
-rc_message:
-  per_second: 10
-  burst_count: 20
-
-rc_registration:
-  per_second: 0.17
-  burst_count: 3
-
-rc_login:
-  address:
-    per_second: 0.17
-    burst_count: 3
-  account:
-    per_second: 0.17
-    burst_count: 3
-  failed_attempts:
-    per_second: 0.17
-    burst_count: 3
-
-rc_admin_redaction:
-  per_second: 1
-  burst_count: 50
-
-rc_joins:
-  local:
-    per_second: 0.1
-    burst_count: 10
-  remote:
-    per_second: 0.01
-    burst_count: 10
-
-rc_3pid_validation:
-  per_second: 0.003
-  burst_count: 5
-
-rc_invites:
-  per_room:
-    per_second: 0.3
-    burst_count: 10
-  per_user:
-    per_second: 0.003
-    burst_count: 5
-
-# Federation (DISABLED for ISMS security isolation)
-# Re-enable only after security review
-federation_domain_whitelist: []
-# Uncomment to enable federation with specific domains:
-# federation_domain_whitelist:
-#   - "trusted-partner.org"
-#   - "external-auditor.com"
-
-# Registration (DISABLED - admin provisioning only for ISMS)
-enable_registration: false
-enable_registration_without_verification: false
-registrations_require_3pid: []
-allowed_local_3pids: []
-
-# User directory
-user_directory:
-  enabled: true
-  search_all_users: true
-  prefer_local_users: true
-
-# Room directory
-enable_room_list_search: true
-alias_creation_rules:
-  - user_id: "*"
-    alias: "*"
-    room_id: "*"
-    action: allow
-
-# Presence tracking
-use_presence: true
-
-# Metrics
-enable_metrics: false
-
-# Report stats to Matrix.org
+registration_shared_secret: "los-#fN7PGV4OXA*QicF3:7.uZQ;8MnTrC5mYly;Gx42AuWO,r"
 report_stats: false
 
-# Signing key (will be auto-generated on first run)
-# signing_key_path: "/data/matrix.openami.local.signing.key"
+macaroon_secret_key: "l#2WtDtgju^lL:L1vx~7MDO_@n+B7vNScR#@qAT6ys:PsHkspi"
+form_secret: ".leywe*3pv7X8b.WjGUWDjJ3SKFlf@N*YwmkqV;f8;2K+6^PKU"
 
-# Trusted key servers (for federation - currently disabled)
-# trusted_key_servers:
-#   - server_name: "matrix.org"
+signing_key_path: "/data/matrix.openami_local.signing.key"
 
-# Password configuration
-password_config:
-  enabled: true
-  policy:
-    enabled: true
-    minimum_length: 12
-    require_digit: true
-    require_symbol: true
-    require_lowercase: true
-    require_uppercase: true
+trusted_key_servers:
+  - server_name: "matrix.org"
 
-# Email (disabled for local development)
-# email:
-#   smtp_host: "localhost"
-#   smtp_port: 25
-#   smtp_user: ""
-#   smtp_pass: ""
-#   notif_from: "Your Matrix Homeserver <noreply@matrix.openami.local>"
-
-# Account validity
-# account_validity:
-#   enabled: true
-#   period: 6w
-#   renew_at: 1w
-#   renew_email_subject: "Renew your %(app)s account"
-
-# Password reset
-# password_providers:
-#   - module: "ldap_auth_provider.LdapAuthProvider"
-#     config:
-#       enabled: true
-
-# Captcha (disabled for internal use)
-# enable_registration_captcha: false
-
-# Turn server (for VoIP - optional)
-# turn_uris: []
-# turn_shared_secret: ""
-# turn_user_lifetime: 1h
-# turn_allow_guests: true
-
-# Rooms
-enable_group_creation: true
-autocreate_auto_join_rooms: true
-
-# App services (for bridges - configure as needed)
-# app_service_config_files: []
-
-# Metrics
-# enable_metrics: true
-# metrics_port: 9000
-
-# OpenID
-# oidc_config:
-#   enabled: true
-
-# SAML2
-# saml2_config:
-#   sp_config:
-
-# CAS
-# cas_config:
-#   enabled: true
-
-# JWT
-# jwt_config:
-#   enabled: true
-
-# Experimental features
-experimental_features:
-  # Enable new features for testing
-  # msc1767_enabled: true
-  # msc2716_enabled: true
-  # msc2444_enabled: true
-
-# Modules (for custom extensions)
-# modules:
-#   - module: "my_module.MyClass"
-#     config:
-#       setting: value
+# vim:ft=yaml
